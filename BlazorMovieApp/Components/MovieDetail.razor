@@ -1,0 +1,91 @@
+﻿@using BlazorMovieApp.Models
+@using BlazorMovieApp.Services
+
+@inject IMovieDbService service
+@inject IJSRuntime jsRuntime
+
+<div class="modal" tabindex="-1" id="movieModal" aria-labelledby="movieModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="movieModalLabel">@CustomHeader</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <EditForm Model="@MovieObject" OnValidSubmit="@HandleValidSubmit">
+
+                    <DataAnnotationsValidator />
+
+                    <div class="form-group">
+                        <label for="movieTitle">Title</label>
+                        <input type="hidden" @bind-value="@MovieObject.Id" />
+                        <InputText id="movieTitle" class="form-control" @bind-Value="@MovieObject.Title" placeholder="Enter Title"></InputText>
+                                   <ValidationMessage For="@(() => MovieObject.Title)" />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="movieReleaseDate">Release Date</label>
+                        <InputDate id="movieReleaseDate" class="form-control" @bind-Value="@MovieObject.ReleaseDate"></InputDate>
+                                   <ValidationMessage For="@(() => MovieObject.ReleaseDate)" />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="movieGenre">Genre</label>
+                        <InputText id="movieGenre" class="form-control" @bind-Value="@MovieObject.Genre" placeholder="Enter Genre"></InputText>
+                                   <ValidationMessage For="@(() => MovieObject.Genre)" />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="movieDirector">Director</label>
+                        <InputText id="movieDirector" class="form-control" @bind-Value="@MovieObject.Director" placeholder="Enter Director"></InputText>
+                                   <ValidationMessage For="@(() => MovieObject.Director)" />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="movieRunningTime">Running Time</label>
+                        <InputNumber id="movieRunningTime" @bind-Value="@MovieObject.RunningTime" class="form-control" />
+                                     <ValidationMessage For="@(() => MovieObject.RunningTime)" />
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">Submit</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public Movie MovieObject { get; set; }
+
+    [Parameter]
+    public EventCallback<Movie> OnSave { get; set; }
+
+    [Parameter]
+    public RenderFragment CustomHeader { get; set; }
+
+    private async Task CloseTaskModal()
+    {
+        await jsRuntime.InvokeAsync<object>("CloseModal", "movieModal");
+    }
+
+    private async void HandleValidSubmit()
+    {
+        if (MovieObject.Id == 0)
+        {
+            await service.AddMovie(MovieObject);
+        }
+        else
+        {
+            await service.EditMovie(MovieObject);
+        }
+
+        await CloseTaskModal();
+
+        await OnSave.InvokeAsync(MovieObject);
+        StateHasChanged();
+    }
+}

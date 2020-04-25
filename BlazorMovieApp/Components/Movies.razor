@@ -1,0 +1,113 @@
+﻿@page "/movies"
+
+@using BlazorMovieApp.Models
+@using BlazorMovieApp.Services
+
+@inject IMovieDbService service
+@inject IJSRuntime jsRuntime
+
+<h1>List of Movies</h1>
+
+<p>
+    <div>
+        <input type="button" data-target="#movieModal" data-toggle="modal" class="btn btn-primary" value="Add Movie" @onclick="(() => LoadMovieModalWithCurrentDate())" />
+    </div>
+</p>
+
+@if (_movies == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Title</th>
+                <th>Release Date</th>
+                <th>Genre</th>
+                <th>Director</th>
+                <th>Running Time</th>
+                <th>Edit</th>
+                <th>Delete</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var movie in _movies)
+            {
+                <tr>
+                    <td>@movie.Title</td>
+                    <td>@movie.ReleaseDate.ToShortDateString()</td>
+                    <td>@movie.Genre</td>
+                    <td>@movie.Director</td>
+                    <td>@movie.RunningTime</td>
+                    <td>
+                        <input type="button" class="btn btn-primary" value="Edit" @onclick="(() => PrepareEdit(movie))" data-toggle="modal" data-target="#movieModal">
+                    </td>
+                    <td>
+                        <input type="button" class="btn btn-danger" value="Delete" @onclick="(() => PrepareForDelete(movie))" data-toggle="modal" data-target="#confirmDeleteModal">
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+<MovieDetail MovieObject="movieObject" OnSave="@RefreshPage">
+    <CustomHeader>@customHeader</CustomHeader>
+</MovieDetail>
+
+<ConfirmDialog OnClick="@Delete" />
+
+@code {
+
+    private List<Movie> _movies;
+    Movie movieObject = new Movie();
+
+    string customHeader = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _movies = await service.GetMovies();
+    }
+
+    private void LoadMovieModalWithCurrentDate()
+    {
+        customHeader = "Add New Movie";
+
+        movieObject.Id = 0;
+        movieObject.Title = "";
+        movieObject.ReleaseDate = DateTime.Now;
+        movieObject.Genre = "";
+        movieObject.Director = "";
+        movieObject.RunningTime = 0;
+    }
+
+    private async Task<List<Movie>> RefreshPage()
+    {
+        _movies = await service.GetMovies();
+        return _movies;
+    }
+
+    private void PrepareEdit(Movie movie)
+    {
+        customHeader = "Edit Movie";
+
+        movieObject = movie;
+    }
+
+    private void PrepareForDelete(Movie movie)
+    {
+        customHeader = "Edit Movie";
+
+        movieObject = movie;
+    }
+
+    private async Task Delete()
+    {
+        var task = await service.DeleteMovie(movieObject.Id);
+        await jsRuntime.InvokeAsync<object>("CloseModal", "confirmDeleteModal");
+        _movies = await service.GetMovies();
+        movieObject = new Movie();
+    }
+}
